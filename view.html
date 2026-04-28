@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Pending Works</title>
+
+    <style>
+    body {
+        font-family: Arial;
+        background: #f4f6f9;
+        padding: 20px;
+    }
+    .top {
+        margin-bottom: 15px;
+        text-align: center;
+    }
+    button {
+        padding: 10px 15px;
+        margin: 5px;
+        border: none;
+        cursor: pointer;
+        border-radius: 5px;
+        color: white;
+        font-weight: bold;
+    }
+    .back { background: #333; }
+    .excel { background: green; }
+    .print { background: blue; }
+    .delete { background: red; }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        background: white;
+        margin-top: 10px;
+    }
+    th, td {
+        border: 1px solid #666;
+        padding: 10px;
+        text-align: center;
+    }
+    th {
+        background: #00bcd4;
+        color: white;
+    }
+    .type-work { background: #e3f2fd; }
+    .type-block { background: #f3e5f5; }
+    .type-indent { background: #e8f5e9; }
+    .type-gatepass { background: #fff3e0; }   /* Gatepass కోసం కొత్త కలర్ */
+    </style>
+</head>
+
+<body>
+
+<div class="top">
+    <button class="back" onclick="goBack()">⬅ Back to Dashboard</button>
+    <button class="excel" onclick="exportExcel()">📄 Excel</button>
+    <button class="print" onclick="printPage()">🖨 Print</button>
+    <button class="delete" onclick="deleteAll()">🗑 Delete All Pending</button>
+</div>
+
+<h2>⏳ All Pending Works</h2>
+
+<table id="dataTable">
+<thead>
+<tr>
+    <th>Type</th>
+    <th>Block</th>
+    <th>Date</th>
+    <th>Item / Problem</th>
+    <th>Person / Dept</th>
+    <th>Status</th>
+    <th>Action</th>
+</tr>
+</thead>
+<tbody></tbody>
+</table>
+
+<script>
+
+// ================= LOAD ALL PENDING DATA =================
+let allPending = [];
+
+function loadAllPending() {
+    allPending = [];
+
+    // 1. My Work Pending
+    const works = JSON.parse(localStorage.getItem("works")) || [];
+    works.forEach(item => {
+        if (item.status === "Pending") {
+            allPending.push({
+                type: "Work",
+                block: item.block || "-",
+                date: item.date,
+                item: item.problem || "Work Entry",
+                person: item.dept || "-",
+                status: item.status,
+                source: "works",
+                data: item
+            });
+        }
+    });
+
+    // 2. Block-wise Works Pending
+    const blocks = ["NGH","NSSH","NNC","OPD BLOCK","NMC","NDC","NPC","CAMP OFFICE","SITE OFFICE","BOYS HOSTEL","GIRLS HOSTEL","OTHER"];
+    blocks.forEach(block => {
+        const key = "works_" + block.replace(/\s+/g, "_");
+        const blockData = JSON.parse(localStorage.getItem(key)) || [];
+        blockData.forEach(item => {
+            if (item.status === "Pending") {
+                allPending.push({
+                    type: "Block",
+                    block: item.block || block,
+                    date: item.date,
+                    item: item.problem || "-",
+                    person: item.dept || "-",
+                    status: item.status,
+                    source: key,
+                    data: item
+                });
+            }
+        });
+    });
+
+    // 3. Indents Pending
+    blocks.forEach(block => {
+        const key = "indents_" + block.replace(/\s+/g, "_");
+        const indentData = JSON.parse(localStorage.getItem(key)) || [];
+        indentData.forEach(item => {
+            if (item.status === "Pending") {
+                allPending.push({
+                    type: "Indent",
+                    block: item.block || block,
+                    date: item.date || item.receivedDate,
+                    item: item.material || "-",
+                    person: item.personName || "-",
+                    status: item.status,
+                    source: key,
+                    data: item
+                });
+            }
+        });
+    });
+
+    // 4. Gatepass Pending  ←←← కొత్తగా జోడించాను
+    blocks.forEach(block => {
+        const key = "gatepass_" + block.replace(/\s+/g, "_");
+        const gatepassData = JSON.parse(localStorage.getItem(key)) || [];
+        gatepassData.forEach(item => {
+            if (item.status === "Pending") {
+                allPending.push({
+                    type: "Gatepass",
+                    block: item.block || block,
+                    date: item.dateTime ? item.dateTime.split("T")[0] : "-",
+                    item: item.purpose || "Gatepass",
+                    person: item.personName || "-",
+                    status: item.status,
+                    source: key,
+                    data: item
+                });
+            }
+        });
+    });
+
+    renderTable();
+}
+
+// Render Table
+function renderTable() {
+    const tbody = document.querySelector("#dataTable tbody");
+    tbody.innerHTML = "";
+
+    if (allPending.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7">No Pending Works Found</td></tr>`;
+        return;
+    }
+
+    allPending.forEach((item, index) => {
+        tbody.innerHTML += `
+        <tr class="type-${item.type.toLowerCase()}">
+            <td><strong>${item.type}</strong></td>
+            <td>${item.block}</td>
+            <td>${item.date || '-'}</td>
+            <td style="text-align:left;">${item.item}</td>
+            <td>${item.person}</td>
+            <td><strong>${item.status}</strong></td>
+            <td>
+                <button style="background:red;color:white;padding:5px 10px;border:none;border-radius:4px;" 
+                        onclick="deletePending(${index})">Remove</button>
+            </td>
+        </tr>`;
+    });
+}
+
+// Delete from Pending (just remove from view)
+function deletePending(index) {
+    if (!confirm("ఈ Pending రికార్డ్ తీసేయాలా?")) return;
+    allPending.splice(index, 1);
+    renderTable();
+}
+
+function exportExcel() {
+    alert("Excel export for all pending will be added soon.");
+}
+
+function printPage() {
+    window.print();
+}
+
+function goBack() {
+    window.location.href = "dashboard.html";
+}
+
+function deleteAll() {
+    if(confirm("ALL Pending items తీసేయాలా?")) {
+        allPending = [];
+        renderTable();
+    }
+}
+
+// Load when page opens
+window.onload = loadAllPending;
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>My Work Entry</title>
+
+    <style>
+    body {
+        font-family: Arial;
+        background: #f4f6f9;
+        padding: 20px;
+    }
+    h2 { text-align: center; }
+
+    .form-box {
+        max-width: 800px;
+        margin: auto;
+        background: white;
+        padding: 25px;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    }
+
+    label {
+        display: block;
+        margin: 12px 0 5px 0;
+        font-weight: bold;
+    }
+
+    input, select, textarea {
+        width: 100%;
+        padding: 10px;
+        margin-bottom: 10px;
+        border-radius: 5px;
+        border: 1px solid #ccc;
+        box-sizing: border-box;
+    }
+
+    button {
+        background: #00bcd4;
+        color: white;
+        border: none;
+        padding: 12px;
+        width: 100%;
+        border-radius: 5px;
+        cursor: pointer;
+        margin-top: 15px;
+        font-size: 16px;
+    }
+
+    .back-btn {
+        background: #333;
+        color: white;
+        padding: 12px 25px;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 16px;
+        font-weight: bold;
+    }
+    </style>
+</head>
+
+<body>
+
+<h2>📋 Daily Work Entry</h2>
+
+<div style="text-align: center; margin-bottom: 20px;">
+    <button onclick="goBackToMenu()" class="back-btn">
+        ⬅ Back to Menu (Dashboard)
+    </button>
+</div>
+
+<div class="form-box">
+
+<form id="workForm">
+
+    <label>S.No</label>
+    <input type="number" id="sno" required>
+
+    <label>Date</label>
+    <input type="date" id="date" required>
+
+    <label>Time</label>
+    <input type="time" id="time" required>
+
+    <label>Block Name</label>
+    <input type="text" id="block" readonly style="background:#f0f0f0; font-weight:bold;">
+
+    <label>Department Name</label>
+    <input type="text" id="dept">
+
+    <label>Floor</label>
+    <input type="text" id="floor">
+
+    <label>Problem</label>
+    <textarea id="problem" rows="3"></textarea>
+
+    <label>Refer Ticket Number</label>
+    <input type="text" id="ticket">
+
+    <label>Status</label>
+    <select id="status">
+        <option value="Pending">Pending</option>
+        <option value="In Progress">In Progress</option>
+        <option value="Completed">Completed</option>
+    </select>
+
+    <!-- Pending Reason Field -->
+    <label id="pendingReasonLabel" style="color: #d32f2f; display: none;">Pending Reason (ఎందుకు Pending ఉంది?)</label>
+    <textarea id="pendingReason" rows="3" style="display: none;" 
+              placeholder="Enter reason why the work is pending..."></textarea>
+
+    <button type="submit">Save Entry</button>
+
+</form>
+
+</div>
+
+<script>
+
+// Block Name Auto Fill from URL
+function getBlockFromURL() {
+    const params = new URLSearchParams(window.location.search);
+    return params.get("block");
+}
+
+// Page Load
+window.onload = function() {
+    // Block Auto Fill
+    const blockName = getBlockFromURL();
+    if (blockName) {
+        document.getElementById("block").value = blockName;
+    } else {
+        document.getElementById("block").removeAttribute("readonly");
+        document.getElementById("block").style.background = "white";
+    }
+
+    // Status Change Event - Pending Reason Show/Hide
+    const statusField = document.getElementById("status");
+    const reasonLabel = document.getElementById("pendingReasonLabel");
+    const reasonField = document.getElementById("pendingReason");
+
+    statusField.addEventListener("change", function() {
+        if (this.value === "Pending") {
+            reasonLabel.style.display = "block";
+            reasonField.style.display = "block";
+        } else {
+            reasonLabel.style.display = "none";
+            reasonField.style.display = "none";
+            reasonField.value = "";
+        }
+    });
+};
+
+// ================= SAVE DATA =================
+document.getElementById("workForm").addEventListener("submit", function(e) {
+    e.preventDefault();
+
+    const formData = {
+        sno: document.getElementById("sno").value,
+        date: document.getElementById("date").value,
+        time: document.getElementById("time").value,
+        block: document.getElementById("block").value,
+        dept: document.getElementById("dept").value,
+        floor: document.getElementById("floor").value,
+        problem: document.getElementById("problem").value,
+        ticket: document.getElementById("ticket").value,
+        status: document.getElementById("status").value,
+        pendingReason: document.getElementById("pendingReason").value.trim()
+    };
+
+    if (!formData.block) {
+        alert("Block Name తప్పనిసరి!");
+        return;
+    }
+
+    const blockKey = "works_" + formData.block.replace(/\s+/g, "_");
+    
+    let oldData = JSON.parse(localStorage.getItem(blockKey)) || [];
+    oldData.push(formData);
+
+    localStorage.setItem(blockKey, JSON.stringify(oldData));
+
+    alert("✅ Saved Successfully!");
+
+    this.reset();
+
+    // Reset Block Name
+    const currentBlock = getBlockFromURL();
+    if (currentBlock) {
+        document.getElementById("block").value = currentBlock;
+    }
+});
+
+function goBackToMenu() {
+    window.location.href = "dashboard.html";
+}
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Indent View</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+    <style>
+    body {
+        font-family: Arial;
+        background: #f4f6f9;
+        padding: 20px;
+        margin: 0;
+    }
+    .header {
+        background: linear-gradient(135deg, #1e3c72, #2a5298);
+        color: white;
+        padding: 20px;
+        text-align: center;
+        border-radius: 10px;
+        margin-bottom: 20px;
+    }
+    .top-buttons {
+        text-align: center;
+        margin-bottom: 20px;
+    }
+    button {
+        padding: 10px 18px;
+        margin: 5px;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 15px;
+    }
+    .back { background: #333; color: white; }
+    .all { background: #007bff; color: white; }
+    .pending { background: #ff9800; color: white; }
+    .excel { background: green; color: white; }
+    .delete-all { background: red; color: white; }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        background: white;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    th, td {
+        border: 1px solid #ccc;
+        padding: 10px;
+        text-align: center;
+        vertical-align: middle;
+    }
+    th {
+        background: #00bcd4;
+        color: white;
+    }
+    .material-cell, .purpose-cell, .files-cell {
+        text-align: left;
+        max-width: 350px;
+        white-space: pre-wrap;
+    }
+    .file-item {
+        cursor: pointer;
+        padding: 8px 12px;
+        margin: 4px 0;
+        background: #e3f2fd;
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        transition: 0.3s;
+    }
+    .file-item:hover {
+        background: #bbdefb;
+        transform: translateX(5px);
+    }
+    .action-btn {
+        padding: 6px 12px;
+        margin: 2px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 13px;
+    }
+    .edit-btn { background: #4CAF50; color: white; }
+    .delete-btn { background: #f44336; color: white; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h2 id="blockTitle">📋 Indents - Block Name</h2>
+</div>
+
+<div class="top-buttons">
+    <button class="back" onclick="goBackToIndents()">⬅ Back to Indents</button>
+    <button class="back" onclick="goBackToDashboard()">⬅ Dashboard</button>
+    <button class="all" onclick="showAll()">📋 All Indents</button>
+    <button class="pending" onclick="showPending()">⏳ Pending Indents</button>
+    <button class="excel" onclick="downloadExcel()">📄 Download Excel</button>
+    <button class="delete-all" onclick="deleteAllData()">🗑 Delete All</button>
+</div>
+
+<table id="dataTable">
+    <thead>
+        <tr>
+            <th>Indent No</th>
+            <th>Indent Date</th>
+            <th>Received Date</th>
+            <th>Person Name</th>
+            <th>Material</th>
+            <th>Quantity</th>
+            <th>Unit</th>
+            <th>Dept/Floor</th>
+            <th>Purpose</th>
+            <th>Attached Files</th>
+            <th>Status</th>
+            <th>Action</th>
+        </tr>
+    </thead>
+    <tbody></tbody>
+</table>
+
+<script>
+// Current Block
+let currentBlock = localStorage.getItem("currentBlock") || "OTHER";
+let allData = [];
+
+document.getElementById("blockTitle").innerHTML = `📋 Indents - ${currentBlock}`;
+
+// Load Data
+function loadIndentData() {
+    const key = "indents_" + currentBlock.replace(/\s+/g, "_");
+    const stored = localStorage.getItem(key);
+    allData = stored ? JSON.parse(stored) : [];
+    showAll();
+}
+
+// Render Table
+function renderTable(data, isPending = false) {
+    const tbody = document.querySelector("#dataTable tbody");
+    tbody.innerHTML = "";
+
+    if (data.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="12">
+            ${isPending ? "No Pending Indents" : "No Indents found in this block"}
+        </td></tr>`;
+        return;
+    }
+
+    data.forEach((item, index) => {
+        const originalIndex = allData.findIndex(d => d.indentNo === item.indentNo && d.timestamp === item.timestamp);
+
+        let filesHTML = "-";
+        if (item.attachedFiles && item.attachedFiles.length > 0) {
+            filesHTML = item.attachedFiles.map((file, fileIndex) => `
+                <div class="file-item" onclick="openAttachment(${originalIndex}, ${fileIndex})">
+                    <i class="fas fa-paperclip"></i> 
+                    ${file.name}
+                    <small>(${(file.size/1024).toFixed(1)} KB)</small>
+                </div>
+            `).join('');
+        }
+
+        tbody.innerHTML += `
+        <tr>
+            <td><strong>${item.indentNo || ''}</strong></td>
+            <td>${item.date || ''}</td>
+            <td>${item.receivedDate || '-'}</td>
+            <td>${item.personName || '-'}</td>
+            <td class="material-cell">${item.material || ''}</td>
+            <td>${item.quantity || ''}</td>
+            <td>${item.unit || ''}</td>
+            <td>${item.deptFloor || ''}</td>
+            <td class="purpose-cell">${item.purpose || '-'}</td>
+            <td class="files-cell">${filesHTML}</td>
+            <td><strong>${item.status || ''}</strong></td>
+            <td>
+                <button class="action-btn edit-btn" onclick="editStatus(${originalIndex})">Edit Status</button>
+                <button class="action-btn delete-btn" onclick="deleteRow(${originalIndex})">Delete</button>
+            </td>
+        </tr>`;
+    });
+};
+
+// Open Attachment (Base64)
+function openAttachment(itemIndex, fileIndex) {
+    const item = allData[itemIndex];
+    if (!item || !item.attachedFiles || !item.attachedFiles[fileIndex]) {
+        alert("File not found!");
+        return;
+    }
+
+    const file = item.attachedFiles[fileIndex];
+    
+    try {
+        const byteString = atob(file.data.split(',')[1]);
+        const mimeString = file.data.split(',')[0].split(':')[1].split(';')[0];
+        
+        const ab = new ArrayBuffer(byteString.length);
+        const ia = new Uint8Array(ab);
+        for (let i = 0; i < byteString.length; i++) {
+            ia[i] = byteString.charCodeAt(i);
+        }
+
+        const blob = new Blob([ab], { type: mimeString });
+        const url = URL.createObjectURL(blob);
+        
+        window.open(url, '_blank');
+    } catch (err) {
+        alert("Unable to open this file.");
+    }
+}
+
+// Show All & Pending
+function showAll() { renderTable(allData); }
+function showPending() {
+    const pendingData = allData.filter(item => item.status === "Pending");
+    renderTable(pendingData, true);
+}
+
+// Edit Status
+function editStatus(index) {
+    if (index < 0 || index >= allData.length) return;
+    const item = allData[index];
+    let newStatus = prompt(`Current Status: ${item.status}\n\nNew Status:\nPending / Approved / Issued`, item.status);
+    
+    if (newStatus) {
+        newStatus = newStatus.trim();
+        if (["Pending", "Approved", "Issued"].includes(newStatus)) {
+            allData[index].status = newStatus;
+            saveData();
+            showAll();
+            alert("✅ Status Updated Successfully!");
+        }
+    }
+}
+
+// Delete Row
+function deleteRow(index) {
+    if (confirm("Delete this indent?")) {
+        allData.splice(index, 1);
+        saveData();
+        showAll();
+    }
+}
+
+// Delete All
+function deleteAllData() {
+    if (confirm(`Delete ALL indents of "${currentBlock}" block?`)) {
+        allData = [];
+        saveData();
+        showAll();
+    }
+}
+
+// Save Data
+function saveData() {
+    const key = "indents_" + currentBlock.replace(/\s+/g, "_");
+    localStorage.setItem(key, JSON.stringify(allData));
+}
+
+// Excel Download
+function downloadExcel() {
+    if (allData.length === 0) {
+        alert("No data to export!");
+        return;
+    }
+    let csv = "Indent No,Indent Date,Received Date,Person Name,Material,Quantity,Unit,Dept/Floor,Purpose,Status\n";
+    allData.forEach(d => {
+        csv += `"${d.indentNo || ''}","${d.date || ''}","${d.receivedDate || ''}","${d.personName || ''}","${d.material || ''}","${d.quantity || ''}","${d.unit || ''}","${d.deptFloor || ''}","${d.purpose || ''}","${d.status || ''}"\n`;
+    });
+
+    const blob = new Blob([csv], { type: "text/csv" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `${currentBlock}_indents.csv`;
+    link.click();
+}
+
+function goBackToIndents() {
+    window.location.href = "indents.html";
+}
+
+function goBackToDashboard() {
+    window.location.href = "dashboard.html";
+}
+
+// Initialize
+window.onload = loadIndentData;
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>New Indent Entry</title>
+
+    <style>
+    body {
+        font-family: Arial;
+        background: #f4f6f9;
+        padding: 20px;
+    }
+    h2 {
+        text-align: center;
+        color: #1e3c72;
+    }
+    .form-box {
+        max-width: 950px;
+        margin: auto;
+        background: white;
+        padding: 30px;
+        border-radius: 12px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+    }
+    label {
+        display: block;
+        margin: 12px 0 6px 0;
+        font-weight: bold;
+        color: #333;
+    }
+    input, select, textarea {
+        width: 100%;
+        padding: 12px;
+        margin-bottom: 15px;
+        border-radius: 6px;
+        border: 1px solid #ccc;
+        box-sizing: border-box;
+        font-size: 16px;
+    }
+    .file-upload {
+        border: 2px dashed #00bcd4;
+        padding: 25px;
+        text-align: center;
+        border-radius: 8px;
+        background: #f8f9fa;
+        margin: 15px 0;
+    }
+    .file-upload:hover {
+        background: #e3f2fd;
+    }
+    button {
+        background: #00bcd4;
+        color: white;
+        border: none;
+        padding: 14px;
+        width: 100%;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 18px;
+        margin-top: 10px;
+    }
+    .back-btn {
+        background: #333;
+        color: white;
+        padding: 12px 25px;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 16px;
+        margin-bottom: 20px;
+    }
+    .file-list div {
+        padding: 8px;
+        background: #f1f1f1;
+        margin: 5px 0;
+        border-radius: 4px;
+        font-size: 14px;
+    }
+    </style>
+</head>
+<body>
+
+<h2>📋 New Indent Entry</h2>
+
+<div style="text-align: center; margin-bottom: 20px;">
+    <button onclick="goBackToIndents()" class="back-btn">
+        ⬅ Back to Indents
+    </button>
+</div>
+
+<div class="form-box">
+
+<form id="indentForm">
+
+    <label>Block Name</label>
+    <input type="text" id="block" readonly style="background:#f0f0f0; font-weight:bold;">
+
+    <label>Indent Number</label>
+    <input type="text" id="indentNo" placeholder="e.g. IND-2026-001" required>
+
+    <label>Indent Date</label>
+    <input type="date" id="date" required>
+
+    <label>Received Date</label>
+    <input type="date" id="receivedDate">
+
+    <label>Person Name</label>
+    <input type="text" id="personName" placeholder="Enter person name" required>
+
+    <label>Material / Item Name</label>
+    <input type="text" id="material" placeholder="Enter material name" required>
+
+    <label>Quantity</label>
+    <input type="number" id="quantity" step="0.01" required>
+
+    <label>Unit</label>
+    <select id="unit" required>
+        <option value="">Select Unit</option>
+        <option value="Nos">Nos</option>
+        <option value="Kg">Kg</option>
+        <option value="Meters">Meters</option>
+        <option value="Liters">Liters</option>
+        <option value="Boxes">Boxes</option>
+        <option value="Packets">Packets</option>
+        <option value="Sets">Sets</option>
+    </select>
+
+    <label>Department / Floor</label>
+    <input type="text" id="deptFloor">
+
+    <label>Purpose / Remarks</label>
+    <textarea id="purpose" rows="4" placeholder="Purpose of this indent..."></textarea>
+
+    <!-- File Attachment -->
+    <label>📎 File Attachment (Quotation, Photo, Invoice, Document etc.)</label>
+    <div class="file-upload">
+        <input type="file" id="attachments" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx">
+        <p style="color:#666; margin:10px 0 0 0;">Click or drag multiple files here</p>
+    </div>
+    <div id="fileList" class="file-list"></div>
+
+    <label>Status</label>
+    <select id="status">
+        <option value="Pending">Pending</option>
+        <option value="Approved">Approved</option>
+        <option value="Issued">Issued</option>
+    </select>
+
+    <button type="submit">Save Indent</button>
+
+</form>
+
+</div>
+
+<script>
+
+// Get Block from URL
+function getBlockFromURL() {
+    const params = new URLSearchParams(window.location.search);
+    return params.get("block");
+}
+
+// File Handling
+let selectedFiles = [];
+
+document.getElementById("attachments").addEventListener("change", function(e) {
+    const fileListDiv = document.getElementById("fileList");
+    fileListDiv.innerHTML = "";
+    selectedFiles = Array.from(e.target.files);
+
+    selectedFiles.forEach(file => {
+        const div = document.createElement("div");
+        div.innerHTML = `📄 ${file.name} <small>(${(file.size/1024).toFixed(1)} KB)</small>`;
+        fileListDiv.appendChild(div);
+    });
+});
+
+// Convert File to Base64
+function fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+    });
+}
+
+window.onload = function() {
+    const blockName = getBlockFromURL();
+    if (blockName) {
+        document.getElementById("block").value = blockName;
+    }
+};
+
+// ================= SAVE INDENT WITH BASE64 FILES =================
+document.getElementById("indentForm").addEventListener("submit", async function(e) {
+    e.preventDefault();
+
+    const attachedFilesData = [];
+
+    // Convert all files to Base64
+    for (let file of selectedFiles) {
+        try {
+            const base64 = await fileToBase64(file);
+            attachedFilesData.push({
+                name: file.name,
+                type: file.type,
+                size: file.size,
+                data: base64
+            });
+        } catch (err) {
+            console.error("Error converting file to Base64:", err);
+        }
+    }
+
+    const formData = {
+        indentNo: document.getElementById("indentNo").value,
+        date: document.getElementById("date").value,
+        receivedDate: document.getElementById("receivedDate").value,
+        personName: document.getElementById("personName").value,
+        material: document.getElementById("material").value,
+        quantity: document.getElementById("quantity").value,
+        unit: document.getElementById("unit").value,
+        deptFloor: document.getElementById("deptFloor").value,
+        purpose: document.getElementById("purpose").value,
+        status: document.getElementById("status").value,
+        block: document.getElementById("block").value,
+        timestamp: new Date().toISOString(),
+        attachedFiles: attachedFilesData
+    };
+
+    if (!formData.block || !formData.indentNo || !formData.material || !formData.personName) {
+        alert("Block, Indent Number, Material & Person Name are required!");
+        return;
+    }
+
+    const blockKey = "indents_" + formData.block.replace(/\s+/g, "_");
+    
+    let oldData = JSON.parse(localStorage.getItem(blockKey)) || [];
+    oldData.push(formData);
+
+    localStorage.setItem(blockKey, JSON.stringify(oldData));
+
+    alert("✅ Indent Saved Successfully with Attachments!");
+
+    // Reset Form
+    this.reset();
+    document.getElementById("fileList").innerHTML = "";
+    selectedFiles = [];
+
+    const currentBlock = getBlockFromURL();
+    if (currentBlock) {
+        document.getElementById("block").value = currentBlock;
+    }
+});
+
+function goBackToIndents() {
+    window.location.href = "indents.html";
+}
+
+</script>
+
+</body>
+</html>

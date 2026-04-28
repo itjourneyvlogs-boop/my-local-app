@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Block View</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+    <style>
+    body {
+        font-family: Arial;
+        background: #f4f6f9;
+        padding: 20px;
+        margin: 0;
+    }
+    .header {
+        background: linear-gradient(135deg, #1e3c72, #2a5298);
+        color: white;
+        padding: 20px;
+        text-align: center;
+        border-radius: 10px;
+        margin-bottom: 20px;
+    }
+    .top-buttons {
+        text-align: center;
+        margin-bottom: 20px;
+    }
+    button {
+        padding: 10px 18px;
+        margin: 5px;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 15px;
+    }
+    .back { background: #333; color: white; }
+    .all { background: #007bff; color: white; }
+    .pending { background: #ff9800; color: white; }
+    .excel { background: green; color: white; }
+    .delete-all { background: red; color: white; }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        background: white;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    th, td {
+        border: 1px solid #ccc;
+        padding: 10px;
+        text-align: center;
+        vertical-align: middle;
+    }
+    th {
+        background: #00bcd4;
+        color: white;
+    }
+    .reason-cell {
+        text-align: left;
+        max-width: 280px;
+        white-space: pre-wrap;
+    }
+    .action-btn {
+        padding: 6px 12px;
+        margin: 2px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 13px;
+    }
+    .edit-btn { background: #4CAF50; color: white; }
+    .delete-btn { background: #f44336; color: white; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h2 id="blockTitle">🏢 Block Name - Work Data</h2>
+</div>
+
+<div class="top-buttons">
+    <button class="back" onclick="goBackToBlocks()">⬅ Back to Blocks</button>
+    <button class="back" onclick="goBackToDashboard()">⬅ Dashboard</button>
+    <button class="all" onclick="showAll()">📋 All Works</button>
+    <button class="pending" onclick="showPending()">⏳ Pending Works</button>
+    <button class="excel" onclick="downloadExcel()">📄 Download Excel</button>
+    <button class="delete-all" onclick="deleteAllData()">🗑 Delete All</button>
+</div>
+
+<table id="dataTable">
+    <thead>
+        <tr>
+            <th>S.No</th>
+            <th>Date</th>
+            <th>Time</th>
+            <th>Block</th>
+            <th>Department</th>
+            <th>Floor</th>
+            <th>Problem</th>
+            <th>Ticket</th>
+            <th>Status</th>
+            <th>Pending Reason</th>
+            <th>Action</th>
+        </tr>
+    </thead>
+    <tbody></tbody>
+</table>
+
+<script>
+// Current Block
+let currentBlock = localStorage.getItem("currentBlock") || "OTHER";
+let allData = [];
+
+document.getElementById("blockTitle").innerHTML = `🏢 ${currentBlock} - Work Data`;
+
+// Load Data
+function loadBlockData() {
+    const key = "works_" + currentBlock.replace(/\s+/g, "_");
+    const stored = localStorage.getItem(key);
+    allData = stored ? JSON.parse(stored) : [];
+    showAll();
+}
+
+// Show All
+function showAll() {
+    renderTable(allData);
+}
+
+// Show Pending Only
+function showPending() {
+    const pendingData = allData.filter(item => item.status === "Pending");
+    renderTable(pendingData, true);
+}
+
+// Render Table
+function renderTable(data, isPending = false) {
+    const tbody = document.querySelector("#dataTable tbody");
+    tbody.innerHTML = "";
+
+    if (data.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="11">
+            ${isPending ? "పెండింగ్ వర్క్స్ లేవు" : "ఈ బ్లాక్‌లో డేటా లేదు"}
+        </td></tr>`;
+        return;
+    }
+
+    data.forEach((item, index) => {
+        const originalIndex = allData.findIndex(d => 
+            d.sno === item.sno && d.date === item.date && d.time === item.time
+        );
+
+        const reasonText = item.pendingReason ? item.pendingReason : "-";
+
+        tbody.innerHTML += `
+        <tr>
+            <td>${item.sno || ''}</td>
+            <td>${item.date || ''}</td>
+            <td>${item.time || ''}</td>
+            <td>${item.block || ''}</td>
+            <td>${item.dept || ''}</td>
+            <td>${item.floor || ''}</td>
+            <td style="text-align:left;">${item.problem || ''}</td>
+            <td>${item.ticket || ''}</td>
+            <td><strong>${item.status || ''}</strong></td>
+            <td class="reason-cell">${reasonText}</td>
+            <td>
+                <button class="action-btn edit-btn" onclick="editStatus(${originalIndex})">Edit Status</button>
+                <button class="action-btn delete-btn" onclick="deleteRow(${originalIndex})">Delete</button>
+            </td>
+        </tr>`;
+    });
+};
+
+// ================= AUTO REMOVE FROM PENDING =================
+function editStatus(index) {
+    if (index < 0 || index >= allData.length) return;
+
+    const item = allData[index];
+    let newStatus = prompt(`Current Status: ${item.status}\n\nNew Status:\nPending / In Progress / Completed`, item.status);
+
+    if (newStatus === null) return;
+    newStatus = newStatus.trim();
+
+    if (["Pending", "In Progress", "Completed"].includes(newStatus)) {
+        allData[index].status = newStatus;
+
+        // If Completed → Remove from General "works" key (Pending Tab)
+        if (newStatus === "Completed") {
+            removeFromGeneralPending(item);
+        }
+
+        saveData();
+        showAll();
+        alert("✅ Status Updated Successfully!\nCompleted అయితే Pending Works నుండి తీసివేయబడుతుంది.");
+    } else {
+        alert("Invalid Status! Please enter: Pending, In Progress or Completed");
+    }
+}
+
+// Remove from General "works" when Completed
+function removeFromGeneralPending(completedItem) {
+    let generalWorks = JSON.parse(localStorage.getItem("works")) || [];
+    
+    generalWorks = generalWorks.filter(item => 
+        !(item.sno === completedItem.sno && 
+          item.date === completedItem.date && 
+          item.time === completedItem.time)
+    );
+    
+    localStorage.setItem("works", JSON.stringify(generalWorks));
+}
+
+// Delete Row
+function deleteRow(index) {
+    if (confirm("ఈ రికార్డ్ తీసేయాలా?")) {
+        allData.splice(index, 1);
+        saveData();
+        showAll();
+    }
+}
+
+// Delete All
+function deleteAllData() {
+    if (confirm(`"${currentBlock}" బ్లాక్ యొక్క అన్ని డేటా తీసేయాలా?`)) {
+        allData = [];
+        saveData();
+        showAll();
+    }
+}
+
+// Save Data
+function saveData() {
+    const key = "works_" + currentBlock.replace(/\s+/g, "_");
+    localStorage.setItem(key, JSON.stringify(allData));
+}
+
+// Excel Download
+function downloadExcel() {
+    if (allData.length === 0) {
+        alert("డేటా లేదు!");
+        return;
+    }
+
+    let csv = "S.No,Date,Time,Block,Department,Floor,Problem,Ticket,Status,Pending Reason\n";
+    allData.forEach(d => {
+        csv += `"${d.sno || ''}","${d.date || ''}","${d.time || ''}","${d.block || ''}","${d.dept || ''}","${d.floor || ''}","${d.problem || ''}","${d.ticket || ''}","${d.status || ''}","${d.pendingReason || ''}"\n`;
+    });
+
+    const blob = new Blob([csv], { type: "text/csv" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `${currentBlock}_work_data.csv`;
+    link.click();
+}
+
+function goBackToBlocks() {
+    window.location.href = "blocks.html";
+}
+
+function goBackToDashboard() {
+    window.location.href = "dashboard.html";
+}
+
+// Initialize
+window.onload = loadBlockData;
+
+</script>
+
+</body>
+</html>

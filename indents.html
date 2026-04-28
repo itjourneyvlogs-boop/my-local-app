@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Indents</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    
+    <style>
+    body {
+        font-family: Arial;
+        background: linear-gradient(135deg, #1e3c72, #2a5298);
+        color: white;
+        padding: 20px;
+    }
+    h2 {
+        text-align: center;
+        margin-bottom: 30px;
+    }
+    .blocks-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 20px;
+        max-width: 1300px;
+        margin: 0 auto;
+    }
+    .block-card {
+        background: rgba(255,255,255,0.15);
+        backdrop-filter: blur(10px);
+        border-radius: 15px;
+        padding: 25px 15px;
+        text-align: center;
+        transition: 0.3s;
+        border: 1px solid rgba(255,255,255,0.2);
+    }
+    .block-card:hover {
+        transform: translateY(-8px);
+        background: rgba(255,255,255,0.25);
+    }
+    .block-card i {
+        font-size: 48px;
+        margin-bottom: 15px;
+        color: #ffcc00;
+    }
+    .block-name {
+        font-size: 20px;
+        font-weight: bold;
+        margin-bottom: 15px;
+    }
+    .btn {
+        padding: 10px 18px;
+        margin: 5px;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 15px;
+        width: 48%;
+    }
+    .enter-btn { background: #4CAF50; color: white; }
+    .view-btn { background: #2196F3; color: white; }
+    .top-buttons {
+        text-align: center;
+        margin-bottom: 30px;
+    }
+    </style>
+</head>
+<body>
+
+<h2>📋 Indents Management</h2>
+
+<div class="top-buttons">
+    <button class="btn" style="background:#333; color:white; width:auto;" onclick="goBack()">
+        ⬅ Back to Dashboard
+    </button>
+</div>
+
+<div class="blocks-container" id="blocksContainer"></div>
+
+<script>
+// Same Blocks List
+const blocks = [
+    "NGH", "NSSH", "NNC", "OPD BLOCK", "NMC", "NDC", "NPC", 
+    "CAMP OFFICE", "SITE OFFICE", "BOYS HOSTEL", "GIRLS HOSTEL", "OTHER"
+];
+
+function renderBlocks() {
+    const container = document.getElementById("blocksContainer");
+    container.innerHTML = "";
+
+    blocks.forEach(block => {
+        const card = document.createElement("div");
+        card.className = "block-card";
+        card.innerHTML = `
+            <i class="fas fa-file-invoice"></i>
+            <div class="block-name">${block}</div>
+            
+            <button class="btn enter-btn" onclick="enterIndent('${block}')">
+                📝 Enter Indent
+            </button>
+            <button class="btn view-btn" onclick="viewIndents('${block}')">
+                👁 View Indents
+            </button>
+        `;
+        container.appendChild(card);
+    });
+}
+
+// Enter New Indent
+function enterIndent(blockName) {
+    window.location.href = `indent-form.html?block=${encodeURIComponent(blockName)}`;
+}
+
+// View Indents of that Block
+function viewIndents(blockName) {
+    localStorage.setItem("currentBlock", blockName);
+    window.location.href = "indent-view.html";
+}
+
+function goBack() {
+    window.location.href = "dashboard.html";
+}
+
+// Load Blocks
+renderBlocks();
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>My Documents</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+    <style>
+    body {
+        font-family: Arial;
+        background: #f4f6f9;
+        padding: 20px;
+    }
+    .header {
+        background: linear-gradient(135deg, #1e3c72, #2a5298);
+        color: white;
+        padding: 20px;
+        text-align: center;
+        border-radius: 10px;
+        margin-bottom: 20px;
+    }
+    .document-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 20px;
+        margin-top: 20px;
+    }
+    .doc-card {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        text-align: center;
+        transition: 0.3s;
+    }
+    .doc-card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    }
+    .doc-icon {
+        font-size: 60px;
+        margin-bottom: 15px;
+        color: #00bcd4;
+    }
+    .doc-name {
+        font-weight: bold;
+        margin: 10px 0;
+        word-break: break-all;
+    }
+    .doc-info {
+        font-size: 13px;
+        color: #666;
+        margin-bottom: 10px;
+    }
+    .back-btn {
+        background: #333;
+        color: white;
+        padding: 12px 25px;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+    }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h2>📂 My Documents</h2>
+</div>
+
+<div style="text-align: center; margin-bottom: 20px;">
+    <button onclick="goBack()" class="back-btn">⬅ Back to Dashboard</button>
+</div>
+
+<div class="document-grid" id="documentsContainer">
+    <!-- Documents will be loaded here -->
+</div>
+
+<script>
+// Load all attachments from Indents and Gatepasses
+function loadAllDocuments() {
+    const container = document.getElementById("documentsContainer");
+    container.innerHTML = "";
+
+    let allDocs = [];
+
+    // Get all blocks
+    const blocks = ["NGH","NSSH","NNC","OPD BLOCK","NMC","NDC","NPC","CAMP OFFICE","SITE OFFICE","BOYS HOSTEL","GIRLS HOSTEL","OTHER"];
+
+    // From Indents
+    blocks.forEach(block => {
+        const key = "indents_" + block.replace(/\s+/g, "_");
+        const data = JSON.parse(localStorage.getItem(key)) || [];
+        data.forEach(item => {
+            if (item.attachedFiles && item.attachedFiles.length > 0) {
+                item.attachedFiles.forEach(file => {
+                    allDocs.push({
+                        ...file,
+                        source: "Indent",
+                        indentNo: item.indentNo,
+                        block: item.block,
+                        date: item.date
+                    });
+                });
+            }
+        });
+    });
+
+    // From Gatepasses
+    blocks.forEach(block => {
+        const key = "gatepass_" + block.replace(/\s+/g, "_");
+        const data = JSON.parse(localStorage.getItem(key)) || [];
+        data.forEach(item => {
+            if (item.attachedFiles && item.attachedFiles.length > 0) {
+                item.attachedFiles.forEach(file => {
+                    allDocs.push({
+                        ...file,
+                        source: "Gatepass",
+                        gatepassNo: item.gatepassNo,
+                        block: item.block,
+                        date: item.dateTime ? item.dateTime.split("T")[0] : ""
+                    });
+                });
+            }
+        });
+    });
+
+    if (allDocs.length === 0) {
+        container.innerHTML = `<p style="text-align:center; grid-column:1/-1; color:#666;">No documents found yet.</p>`;
+        return;
+    }
+
+    allDocs.forEach(doc => {
+        const card = document.createElement("div");
+        card.className = "doc-card";
+        card.innerHTML = `
+            <div class="doc-icon">📎</div>
+            <div class="doc-name">${doc.name}</div>
+            <div class="doc-info">
+                ${doc.source} • ${doc.block}<br>
+                ${doc.indentNo || doc.gatepassNo || ''} • ${doc.date}
+            </div>
+            <button onclick="openDocument('${doc.data}')" style="margin-top:10px; padding:8px 16px; background:#00bcd4; color:white; border:none; border-radius:5px; cursor:pointer;">
+                Open File
+            </button>
+        `;
+        container.appendChild(card);
+    });
+}
+
+function openDocument(base64Data) {
+    try {
+        const byteString = atob(base64Data.split(',')[1]);
+        const mimeString = base64Data.split(',')[0].split(':')[1].split(';')[0];
+        
+        const ab = new ArrayBuffer(byteString.length);
+        const ia = new Uint8Array(ab);
+        for (let i = 0; i < byteString.length; i++) ia[i] = byteString.charCodeAt(i);
+
+        const blob = new Blob([ab], { type: mimeString });
+        const url = URL.createObjectURL(blob);
+        window.open(url, '_blank');
+    } catch (err) {
+        alert("Unable to open this file.");
+    }
+}
+
+function goBack() {
+    window.location.href = "dashboard.html";
+}
+
+// Load documents when page opens
+window.onload = loadAllDocuments;
+</script>
+
+</body>
+</html>

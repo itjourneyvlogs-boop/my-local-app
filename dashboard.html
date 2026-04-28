@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+    body {
+        margin: 0;
+        font-family: Arial;
+        background: linear-gradient(135deg, #1e3c72, #2a5298);
+        color: white;
+    }
+    header {
+        color: white;
+        text-align: center;
+        padding: 25px;
+        font-size: 28px;
+        font-weight: bold;
+    }
+    .chart-box {
+        width: 340px;
+        margin: 25px auto;
+        background: rgba(255,255,255,0.12);
+        padding: 25px;
+        border-radius: 20px;
+        backdrop-filter: blur(12px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+    }
+    .container {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 25px;
+        padding: 30px;
+    }
+    .card {
+        backdrop-filter: blur(10px);
+        background: rgba(255,255,255,0.15);
+        border-radius: 18px;
+        padding: 30px 20px;
+        text-align: center;
+        color: white;
+        cursor: pointer;
+        transition: all 0.4s ease;
+        border: 1px solid rgba(255,255,255,0.25);
+    }
+    .card:hover {
+        transform: translateY(-12px) scale(1.08);
+        background: rgba(255,255,255,0.25);
+        box-shadow: 0 15px 30px rgba(0,0,0,0.4);
+    }
+    .card i {
+        font-size: 48px;
+        margin-bottom: 15px;
+        display: block;
+    }
+    .logout {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: #e74c3c;
+        color: white;
+        border: none;
+        padding: 10px 18px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 15px;
+        font-weight: bold;
+    }
+    </style>
+</head>
+<body>
+
+<header>🚀 IT Work Management Dashboard</header>
+<button class="logout" onclick="logout()">Logout</button>
+
+<!-- Chart -->
+<div class="chart-box">
+    <canvas id="myChart"></canvas>
+</div>
+
+<div class="container">
+    <div class="card" onclick="openPage('My Work')">
+        <i class="fas fa-briefcase" style="color: #00e5ff;"></i>
+        <h3>My Work</h3>
+    </div>
+    <div class="card" onclick="openPage('Blocks')">
+        <i class="fas fa-building" style="color: #ffcc00;"></i>
+        <h3>Blocks</h3>
+    </div>
+    <div class="card" onclick="openPage('Indents')">
+        <i class="fas fa-file-invoice" style="color: #ff6f61;"></i>
+        <h3>Indents</h3>
+    </div>
+    <div class="card" onclick="openPage('Documents')">
+        <i class="fas fa-folder-open" style="color: #66ff99;"></i>
+        <h3>My Documents</h3>
+    </div>
+    <div class="card" onclick="openPage('Pending Works')">
+        <i class="fas fa-hourglass-half" style="color: #ff66cc;"></i>
+        <h3>Pending Works</h3>
+    </div>
+    <div class="card" onclick="openPage('Gatepass')">
+        <i class="fas fa-id-badge" style="color: #ffa500;"></i>
+        <h3>Gatepass Data</h3>
+    </div>
+</div>
+
+<script>
+// Login Check
+if(localStorage.getItem("loggedIn") !== "true") {
+    window.location.href = "index.html";
+}
+
+let myChart;
+
+// Update Chart with Real Data
+function updateChart() {
+    const blocks = ["NGH","NSSH","NNC","OPD BLOCK","NMC","NDC","NPC","CAMP OFFICE","SITE OFFICE","BOYS HOSTEL","GIRLS HOSTEL","OTHER"];
+
+    let totalWorks = 0;
+    let totalIndents = 0;
+    let totalGatepasses = 0;
+    let totalPending = 0;
+
+    // General Works
+    const generalWorks = JSON.parse(localStorage.getItem("works")) || [];
+    totalWorks += generalWorks.length;
+    totalPending += generalWorks.filter(w => w.status === "Pending").length;
+
+    blocks.forEach(block => {
+        // Block Works
+        const workKey = "works_" + block.replace(/\s+/g, "_");
+        const works = JSON.parse(localStorage.getItem(workKey)) || [];
+        totalWorks += works.length;
+        totalPending += works.filter(w => w.status === "Pending").length;
+
+        // Indents
+        const indentKey = "indents_" + block.replace(/\s+/g, "_");
+        const indents = JSON.parse(localStorage.getItem(indentKey)) || [];
+        totalIndents += indents.length;
+        totalPending += indents.filter(i => i.status === "Pending").length;
+
+        // Gatepasses
+        const gateKey = "gatepass_" + block.replace(/\s+/g, "_");
+        const gatepasses = JSON.parse(localStorage.getItem(gateKey)) || [];
+        totalGatepasses += gatepasses.length;
+        totalPending += gatepasses.filter(g => g.status === "Pending").length;
+    });
+
+    const chartData = {
+        labels: ['My Work', 'Blocks Work', 'Indents', 'Gatepass', 'Pending Works'],
+        datasets: [{
+            data: [totalWorks, totalWorks, totalIndents, totalGatepasses, totalPending],
+            backgroundColor: ['#00e5ff', '#ffcc00', '#ff6f61', '#66ff99', '#ff66cc'],
+            borderWidth: 3,
+            borderColor: '#ffffff'
+        }]
+    };
+
+    if (myChart) {
+        myChart.data = chartData;
+        myChart.update();
+    } else {
+        const ctx = document.getElementById('myChart');
+        myChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: chartData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: 'white',
+                            font: { size: 14 },
+                            padding: 20,
+                            usePointStyle: true
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0,0,0,0.8)',
+                        titleFont: { size: 16 },
+                        bodyFont: { size: 14 }
+                    }
+                }
+            }
+        });
+    }
+}
+
+// Navigation - Fixed
+function openPage(name) {
+    if(name === "My Work") {
+        window.location.href = "mywork.html";
+    } 
+    else if(name === "Blocks") {
+        window.location.href = "blocks.html";
+    }
+    else if(name === "Indents") {
+        window.location.href = "indents.html";
+    }
+    else if(name === "Documents") {
+        window.location.href = "my-documents.html";   // ← Fixed here
+    }
+    else if(name === "Pending Works") {
+        window.location.href = "view.html";
+    }
+    else if(name === "Gatepass") {
+        window.location.href = "gatepass.html";
+    }
+    else {
+        alert(name + " module coming soon 🚀");
+    }
+}
+
+function logout() {
+    localStorage.removeItem("loggedIn");
+    window.location.href = "index.html";
+}
+
+// Initialize
+window.onload = function() {
+    updateChart();
+    setInterval(updateChart, 3000);   // ప్రతి 3 సెకన్లకు అప్‌డేట్
+};
+</script>
+
+</body>
+</html>

@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Blocks</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    
+    <style>
+    body {
+        font-family: Arial;
+        background: linear-gradient(135deg, #1e3c72, #2a5298);
+        color: white;
+        padding: 20px;
+    }
+    h2 {
+        text-align: center;
+        margin-bottom: 30px;
+    }
+    .blocks-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 20px;
+        max-width: 1300px;
+        margin: 0 auto;
+    }
+    .block-card {
+        background: rgba(255,255,255,0.15);
+        backdrop-filter: blur(10px);
+        border-radius: 15px;
+        padding: 25px 15px;
+        text-align: center;
+        transition: 0.3s;
+        border: 1px solid rgba(255,255,255,0.2);
+    }
+    .block-card:hover {
+        transform: translateY(-8px);
+        background: rgba(255,255,255,0.25);
+        box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+    }
+    .block-card i {
+        font-size: 48px;
+        margin-bottom: 15px;
+        color: #00e5ff;
+    }
+    .block-name {
+        font-size: 20px;
+        font-weight: bold;
+        margin-bottom: 15px;
+    }
+    .btn {
+        padding: 10px 18px;
+        margin: 5px;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 15px;
+        width: 48%;
+    }
+    .enter-btn {
+        background: #4CAF50;
+        color: white;
+    }
+    .view-btn {
+        background: #2196F3;
+        color: white;
+    }
+    .top-buttons {
+        text-align: center;
+        margin-bottom: 30px;
+    }
+    </style>
+</head>
+<body>
+
+<h2>🏢 All Blocks - Work Management</h2>
+
+<div class="top-buttons">
+    <button class="btn" style="background:#333; color:white; width:auto;" onclick="goBack()">
+        ⬅ Back to Dashboard
+    </button>
+</div>
+
+<div class="blocks-container" id="blocksContainer"></div>
+
+<script>
+// All Blocks List
+const blocks = [
+    "NGH", "NSSH", "NNC", "OPD BLOCK", "NMC", "NDC", "NPC", 
+    "CAMP OFFICE", "SITE OFFICE", "BOYS HOSTEL", "GIRLS HOSTEL", "OTHER"
+];
+
+// Render All Block Cards
+function renderBlocks() {
+    const container = document.getElementById("blocksContainer");
+    container.innerHTML = "";
+
+    blocks.forEach(block => {
+        const card = document.createElement("div");
+        card.className = "block-card";
+        card.innerHTML = `
+            <i class="fas fa-building"></i>
+            <div class="block-name">${block}</div>
+            
+            <button class="btn enter-btn" onclick="enterData('${block}')">
+                📝 Enter Data
+            </button>
+            <button class="btn view-btn" onclick="viewData('${block}')">
+                👁 View Data
+            </button>
+        `;
+        container.appendChild(card);
+    });
+}
+
+// Enter Data → mywork.htmlలో ఆ బ్లాక్‌తో తెరువు
+function enterData(blockName) {
+    window.location.href = `mywork.html?block=${encodeURIComponent(blockName)}`;
+}
+
+// View Data → block-view.htmlలో ఆ బ్లాక్ డేటా చూపు
+function viewData(blockName) {
+    localStorage.setItem("currentBlock", blockName);
+    window.location.href = "block-view.html";
+}
+
+// Back to Dashboard
+function goBack() {
+    window.location.href = "dashboard.html";
+}
+
+// Initialize
+renderBlocks();
+
+</script>
+
+</body>
+</html>

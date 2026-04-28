@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Gatepass Data</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    
+    <style>
+    body {
+        font-family: Arial;
+        background: linear-gradient(135deg, #1e3c72, #2a5298);
+        color: white;
+        padding: 20px;
+    }
+    h2 {
+        text-align: center;
+        margin-bottom: 40px;
+        font-size: 28px;
+    }
+    .blocks-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 25px;
+        max-width: 1400px;
+        margin: 0 auto;
+    }
+    .block-card {
+        background: rgba(255,255,255,0.12);
+        backdrop-filter: blur(12px);
+        border-radius: 20px;
+        padding: 30px 20px;
+        text-align: center;
+        transition: all 0.4s ease;
+        border: 2px solid rgba(255,255,255,0.15);
+        box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+    }
+    .block-card:hover {
+        transform: translateY(-12px) scale(1.05);
+        background: rgba(255,255,255,0.22);
+        border-color: #ff66cc;
+        box-shadow: 0 15px 30px rgba(255,102,204,0.3);
+    }
+    .block-card i {
+        font-size: 58px;
+        margin-bottom: 18px;
+        color: #ff66cc;
+        transition: 0.3s;
+    }
+    .block-card:hover i {
+        color: #ff99dd;
+        transform: scale(1.15);
+    }
+    .block-name {
+        font-size: 21px;
+        font-weight: bold;
+        margin-bottom: 20px;
+        color: white;
+    }
+    .btn {
+        padding: 12px 20px;
+        margin: 6px;
+        border: none;
+        border-radius: 10px;
+        cursor: pointer;
+        font-size: 15.5px;
+        font-weight: 600;
+        width: 48%;
+        transition: 0.3s;
+    }
+    .enter-btn {
+        background: linear-gradient(135deg, #4CAF50, #66bb6a);
+        color: white;
+    }
+    .view-btn {
+        background: linear-gradient(135deg, #2196F3, #42a5f5);
+        color: white;
+    }
+    .btn:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 15px rgba(0,0,0,0.3);
+    }
+    .top-buttons {
+        text-align: center;
+        margin-bottom: 35px;
+    }
+    </style>
+</head>
+<body>
+
+<h2>🆔 Gatepass Management</h2>
+
+<div class="top-buttons">
+    <button onclick="goBack()" 
+            style="background:#333; color:white; padding:12px 25px; border:none; border-radius:10px; font-size:16px;">
+        ⬅ Back to Dashboard
+    </button>
+</div>
+
+<div class="blocks-container" id="blocksContainer"></div>
+
+<script>
+// Blocks List
+const blocks = [
+    "NGH", "NSSH", "NNC", "OPD BLOCK", "NMC", "NDC", "NPC", 
+    "CAMP OFFICE", "SITE OFFICE", "BOYS HOSTEL", "GIRLS HOSTEL", "OTHER"
+];
+
+function renderBlocks() {
+    const container = document.getElementById("blocksContainer");
+    container.innerHTML = "";
+
+    blocks.forEach(block => {
+        const card = document.createElement("div");
+        card.className = "block-card";
+        card.innerHTML = `
+            <i class="fas fa-id-card"></i>
+            <div class="block-name">${block}</div>
+            
+            <button class="btn enter-btn" onclick="enterGatepass('${block}')">
+                📝 Enter Gatepass
+            </button>
+            <button class="btn view-btn" onclick="viewGatepass('${block}')">
+                👁 View Gatepass
+            </button>
+        `;
+        container.appendChild(card);
+    });
+}
+
+function enterGatepass(blockName) {
+    window.location.href = `gatepass-form.html?block=${encodeURIComponent(blockName)}`;
+}
+
+function viewGatepass(blockName) {
+    localStorage.setItem("currentBlock", blockName);
+    window.location.href = "gatepass-view.html";
+}
+
+function goBack() {
+    window.location.href = "dashboard.html";
+}
+
+// Initialize
+renderBlocks();
+
+</script>
+
+</body>
+</html>
