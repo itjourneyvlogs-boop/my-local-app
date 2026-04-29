@@ -19,6 +19,26 @@
         font-size: 28px;
         font-weight: bold;
     }
+    .search-container {
+        text-align: center;
+        margin: 20px auto;
+        max-width: 600px;
+    }
+    #searchInput {
+        width: 90%;
+        max-width: 550px;
+        padding: 14px 20px;
+        font-size: 16px;
+        border: none;
+        border-radius: 50px;
+        background: rgba(255,255,255,0.95);
+        color: #333;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    }
+    #searchInput:focus {
+        outline: none;
+        box-shadow: 0 6px 20px rgba(0, 229, 255, 0.5);
+    }
     .chart-box {
         width: 340px;
         margin: 25px auto;
@@ -68,12 +88,48 @@
         font-size: 15px;
         font-weight: bold;
     }
+    .search-results {
+        max-width: 1200px;
+        margin: 20px auto;
+        padding: 0 20px;
+    }
+    /* Backup Buttons Style */
+    .backup-btn {
+        padding: 12px 20px;
+        margin: 8px;
+        border: none;
+        border-radius: 8px;
+        font-size: 16px;
+        cursor: pointer;
+        font-weight: bold;
+    }
     </style>
 </head>
 <body>
 
 <header>🚀 IT Work Management Dashboard</header>
 <button class="logout" onclick="logout()">Logout</button>
+
+<!-- Search Bar -->
+<div class="search-container">
+    <input type="text" id="searchInput" placeholder="🔍 Search by Block, Name, Problem, Material, Purpose..." 
+           onkeyup="searchPendingWorks()">
+</div>
+
+<!-- Data Backup Section -->
+<div style="text-align: center; margin: 20px 0 30px 0;">
+    <button onclick="exportAllData()" class="backup-btn" 
+            style="background: #4CAF50; color: white;">
+        📤 Export All Data (Backup)
+    </button>
+    
+    <button onclick="importData()" class="backup-btn" 
+            style="background: #2196F3; color: white;">
+        📥 Import Data (Restore)
+    </button>
+    
+    <input type="file" id="importFile" accept=".json" style="display: none;" onchange="handleImportFile(this)">
+</div>
 
 <!-- Chart -->
 <div class="chart-box">
@@ -107,6 +163,24 @@
     </div>
 </div>
 
+<!-- Search Results Area -->
+<div class="search-results" id="searchResults" style="display:none;">
+    <h3 style="color:white; text-align:center;">Search Results</h3>
+    <table id="searchTable" style="width:100%; background:white; color:black; border-collapse:collapse;">
+        <thead>
+            <tr style="background:#00bcd4; color:white;">
+                <th>Type</th>
+                <th>Block</th>
+                <th>Date</th>
+                <th>Item / Problem</th>
+                <th>Person / Dept</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+</div>
+
 <script>
 // Login Check
 if(localStorage.getItem("loggedIn") !== "true") {
@@ -115,7 +189,7 @@ if(localStorage.getItem("loggedIn") !== "true") {
 
 let myChart;
 
-// Update Chart with Real Data
+// Update Chart
 function updateChart() {
     const blocks = ["NGH","NSSH","NNC","OPD BLOCK","NMC","NDC","NPC","CAMP OFFICE","SITE OFFICE","BOYS HOSTEL","GIRLS HOSTEL","OTHER"];
 
@@ -124,25 +198,21 @@ function updateChart() {
     let totalGatepasses = 0;
     let totalPending = 0;
 
-    // General Works
     const generalWorks = JSON.parse(localStorage.getItem("works")) || [];
     totalWorks += generalWorks.length;
     totalPending += generalWorks.filter(w => w.status === "Pending").length;
 
     blocks.forEach(block => {
-        // Block Works
         const workKey = "works_" + block.replace(/\s+/g, "_");
         const works = JSON.parse(localStorage.getItem(workKey)) || [];
         totalWorks += works.length;
         totalPending += works.filter(w => w.status === "Pending").length;
 
-        // Indents
         const indentKey = "indents_" + block.replace(/\s+/g, "_");
         const indents = JSON.parse(localStorage.getItem(indentKey)) || [];
         totalIndents += indents.length;
         totalPending += indents.filter(i => i.status === "Pending").length;
 
-        // Gatepasses
         const gateKey = "gatepass_" + block.replace(/\s+/g, "_");
         const gatepasses = JSON.parse(localStorage.getItem(gateKey)) || [];
         totalGatepasses += gatepasses.length;
@@ -150,10 +220,10 @@ function updateChart() {
     });
 
     const chartData = {
-        labels: ['My Work', 'Blocks Work', 'Indents', 'Gatepass', 'Pending Works'],
+        labels: ['Total Works', 'Indents', 'Gatepasses', 'Pending'],
         datasets: [{
-            data: [totalWorks, totalWorks, totalIndents, totalGatepasses, totalPending],
-            backgroundColor: ['#00e5ff', '#ffcc00', '#ff6f61', '#66ff99', '#ff66cc'],
+            data: [totalWorks, totalIndents, totalGatepasses, totalPending],
+            backgroundColor: ['#00e5ff', '#ff6f61', '#66ff99', '#ff66cc'],
             borderWidth: 3,
             borderColor: '#ffffff'
         }]
@@ -171,49 +241,105 @@ function updateChart() {
                 responsive: true,
                 maintainAspectRatio: true,
                 plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: {
-                            color: 'white',
-                            font: { size: 14 },
-                            padding: 20,
-                            usePointStyle: true
-                        }
-                    },
-                    tooltip: {
-                        backgroundColor: 'rgba(0,0,0,0.8)',
-                        titleFont: { size: 16 },
-                        bodyFont: { size: 14 }
-                    }
+                    legend: { position: 'bottom', labels: { color: 'white', font: { size: 14 } } }
                 }
             }
         });
     }
 }
 
-// Navigation - Fixed
+// Search Function
+function searchPendingWorks() {
+    const query = document.getElementById("searchInput").value.toLowerCase().trim();
+    const resultsDiv = document.getElementById("searchResults");
+    const tbody = document.querySelector("#searchTable tbody");
+
+    if (query.length < 2) {
+        resultsDiv.style.display = "none";
+        return;
+    }
+
+    let results = [];
+    const blocks = ["NGH","NSSH","NNC","OPD BLOCK","NMC","NDC","NPC","CAMP OFFICE","SITE OFFICE","BOYS HOSTEL","GIRLS HOSTEL","OTHER"];
+
+    // General Works
+    const generalWorks = JSON.parse(localStorage.getItem("works")) || [];
+    generalWorks.forEach(item => {
+        if (item.status === "Pending") {
+            const text = `${item.block} ${item.problem} ${item.dept}`.toLowerCase();
+            if (text.includes(query)) {
+                results.push({ type: "Work", block: item.block || "-", date: item.date, item: item.problem, person: item.dept, status: "Pending" });
+            }
+        }
+    });
+
+    // Block Works, Indents, Gatepasses
+    blocks.forEach(block => {
+        // Block Works
+        const workKey = "works_" + block.replace(/\s+/g, "_");
+        const blockWorks = JSON.parse(localStorage.getItem(workKey)) || [];
+        blockWorks.forEach(item => {
+            if (item.status === "Pending") {
+                const text = `${item.block} ${item.problem} ${item.dept}`.toLowerCase();
+                if (text.includes(query)) {
+                    results.push({ type: "Block Work", block: item.block, date: item.date, item: item.problem, person: item.dept, status: "Pending" });
+                }
+            }
+        });
+
+        // Indents
+        const indentKey = "indents_" + block.replace(/\s+/g, "_");
+        const indents = JSON.parse(localStorage.getItem(indentKey)) || [];
+        indents.forEach(item => {
+            if (item.status === "Pending") {
+                const text = `${item.block} ${item.material} ${item.personName}`.toLowerCase();
+                if (text.includes(query)) {
+                    results.push({ type: "Indent", block: item.block, date: item.date, item: item.material, person: item.personName, status: "Pending" });
+                }
+            }
+        });
+
+        // Gatepasses
+        const gateKey = "gatepass_" + block.replace(/\s+/g, "_");
+        const gatepasses = JSON.parse(localStorage.getItem(gateKey)) || [];
+        gatepasses.forEach(item => {
+            if (item.status === "Pending") {
+                const text = `${item.block} ${item.purpose} ${item.personName}`.toLowerCase();
+                if (text.includes(query)) {
+                    results.push({ type: "Gatepass", block: item.block, date: item.dateTime ? item.dateTime.split("T")[0] : "-", item: item.purpose, person: item.personName, status: "Pending" });
+                }
+            }
+        });
+    });
+
+    tbody.innerHTML = "";
+    if (results.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:20px;">No matching records found</td></tr>`;
+    } else {
+        results.forEach(item => {
+            tbody.innerHTML += `
+                <tr>
+                    <td><strong>${item.type}</strong></td>
+                    <td>${item.block}</td>
+                    <td>${item.date || '-'}</td>
+                    <td style="text-align:left;">${item.item}</td>
+                    <td>${item.person}</td>
+                    <td><strong style="color:#ff9800;">${item.status}</strong></td>
+                </tr>`;
+        });
+    }
+    resultsDiv.style.display = "block";
+}
+
+// Navigation
 function openPage(name) {
-    if(name === "My Work") {
-        window.location.href = "mywork.html";
-    } 
-    else if(name === "Blocks") {
-        window.location.href = "blocks.html";
-    }
-    else if(name === "Indents") {
-        window.location.href = "indents.html";
-    }
-    else if(name === "Documents") {
-        window.location.href = "my-documents.html";   // ← Fixed here
-    }
-    else if(name === "Pending Works") {
-        window.location.href = "view.html";
-    }
-    else if(name === "Gatepass") {
-        window.location.href = "gatepass.html";
-    }
-    else {
-        alert(name + " module coming soon 🚀");
-    }
+    if(name === "My Work") window.location.href = "mywork.html";
+    else if(name === "Blocks") window.location.href = "blocks.html";
+    else if(name === "Indents") window.location.href = "indents.html";
+    else if(name === "Documents") window.location.href = "my-documents.html";
+    else if(name === "Pending Works") window.location.href = "view.html";
+    else if(name === "Gatepass") window.location.href = "gatepass.html";
+    else alert(name + " module coming soon 🚀");
 }
 
 function logout() {
@@ -221,10 +347,103 @@ function logout() {
     window.location.href = "index.html";
 }
 
+// ================= DATA EXPORT & IMPORT =================
+function exportAllData() {
+    const data = {
+        timestamp: new Date().toISOString(),
+        works: JSON.parse(localStorage.getItem("works") || "[]"),
+        blocksData: {},
+        indentsData: {},
+        gatepassesData: {}
+    };
+
+    const blocks = ["NGH","NSSH","NNC","OPD BLOCK","NMC","NDC","NPC","CAMP OFFICE","SITE OFFICE","BOYS HOSTEL","GIRLS HOSTEL","OTHER"];
+    
+    blocks.forEach(block => {
+        const cleanBlock = block.replace(/\s+/g, "_");
+        
+        const workKey = "works_" + cleanBlock;
+        data.blocksData[workKey] = JSON.parse(localStorage.getItem(workKey) || "[]");
+        
+        const indentKey = "indents_" + cleanBlock;
+        data.indentsData[indentKey] = JSON.parse(localStorage.getItem(indentKey) || "[]");
+        
+        const gateKey = "gatepass_" + cleanBlock;
+        data.gatepassesData[gateKey] = JSON.parse(localStorage.getItem(gateKey) || "[]");
+    });
+
+    const jsonString = JSON.stringify(data, null, 2);
+    const blob = new Blob([jsonString], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `IT_Work_Backup_${new Date().toISOString().slice(0,10)}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    alert("✅ All Data Exported Successfully!\nBackup file downloaded.");
+}
+
+function importData() {
+    document.getElementById("importFile").click();
+}
+
+function handleImportFile(input) {
+    const file = input.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const importedData = JSON.parse(e.target.result);
+
+            if (confirm("⚠️ WARNING: All existing data will be replaced with imported data. Do you want to continue?")) {
+                
+                if (importedData.works) localStorage.setItem("works", JSON.stringify(importedData.works));
+
+                const blocks = ["NGH","NSSH","NNC","OPD BLOCK","NMC","NDC","NPC","CAMP OFFICE","SITE OFFICE","BOYS HOSTEL","GIRLS HOSTEL","OTHER"];
+                
+                blocks.forEach(block => {
+                    const cleanBlock = block.replace(/\s+/g, "_");
+                    
+                    if (importedData.blocksData) {
+                        const workKey = "works_" + cleanBlock;
+                        if (importedData.blocksData[workKey]) {
+                            localStorage.setItem(workKey, JSON.stringify(importedData.blocksData[workKey]));
+                        }
+                    }
+                    
+                    if (importedData.indentsData) {
+                        const indentKey = "indents_" + cleanBlock;
+                        if (importedData.indentsData[indentKey]) {
+                            localStorage.setItem(indentKey, JSON.stringify(importedData.indentsData[indentKey]));
+                        }
+                    }
+                    
+                    if (importedData.gatepassesData) {
+                        const gateKey = "gatepass_" + cleanBlock;
+                        if (importedData.gatepassesData[gateKey]) {
+                            localStorage.setItem(gateKey, JSON.stringify(importedData.gatepassesData[gateKey]));
+                        }
+                    }
+                });
+
+                alert("🎉 Data Imported Successfully!\nRefreshing page...");
+                setTimeout(() => location.reload(), 1200);
+            }
+        } catch (err) {
+            alert("❌ Error: Invalid backup file!");
+        }
+    };
+    reader.readAsText(file);
+}
+
 // Initialize
 window.onload = function() {
     updateChart();
-    setInterval(updateChart, 3000);   // ప్రతి 3 సెకన్లకు అప్‌డేట్
+    setInterval(updateChart, 8000);
 };
 </script>
 
